@@ -12,7 +12,8 @@ def get_green_from_panelapp_file(file_path):
     with open(file_path) as panelapp_file:
         for row in csv.DictReader(panelapp_file, delimiter='\t'):
             if 'Expert Review Green' in row['Sources(; separated)'].split(';'): 
-                panelapp_dict[row['Gene Symbol']] = row
+                if row['Gene Symbol'] != '':
+                    panelapp_dict[row['Gene Symbol']] = row
     return panelapp_dict
     # {'AARS': {'Entity Name': 'AARS', 'Entity type': 'gene', 'Gene Symbol': 'AARS', 'Sources(; separated)': 'Wessex and West Midlands GLH;NHS GMS;Victorian C\linical Genetics Services;Expert Review Green;Literature', 'Level4': 'Early onset or syndromic epilepsy', 'Level3': '', 'Level2': '', 'Model_Of_Inherita\nce': 'BIALLELIC, autosomal or pseudoautosomal', 'Phenotypes': 'Developmental and epileptic encephalopathy 29, OMIM:616339;Developmental and epileptic e\ncephalopathy, 29, MONDO:0014593', 'Omim': '601065', 'Orphanet': '', 'HPO': '', 'Publications': '25817015;28493438', 'Description': '', 'Flagged': '', '\GEL_Status': '3', 'UserRatings_Green_amber_red': '', 'version': '4.0', 'ready': '', 'Mode of pathogenicity': '', 'EnsemblId(GRch37)': 'ENSG00000090861',\ 'EnsemblId(GRch38)': 'ENSG00000090861', 'HGNC': 'HGNC:20', 'Position Chromosome': '', 'Position GRCh37 Start': '', 'Position GRCh37 End': '', 'Position\ GRCh38 Start': '', 'Position GRCh38 End': '', 'STR Repeated Sequence': '', 'STR Normal Repeats': '', 'STR Pathogenic Repeats': '', 'Region Haploinsuffi\ciency Score': '', 'Region Triplosensitivity Score': '', 'Region Required Overlap Percentage': '', 'Region Variant Type': '', 'Region Verbose Name': ''}
 
@@ -48,6 +49,8 @@ if __name__ == "__main__":
                 if gene in green_genes_dict.keys():
                     variant_types = []
                     if 'MC' in clinvar_row:
+                        is_missense = False
+                        is_premature_stop_codon = False
                         for molecular_consequence in clinvar_row['MC']:
                             # clinvar_row['MC'] : value from 'MC' = [['SO:0001624', '3_prime_UTR_variant']]
                             variant_type = molecular_consequence[1]
@@ -57,12 +60,12 @@ if __name__ == "__main__":
                                                 'inframe_indel',
                                                 'inframe_insertion',
                                                 'missense_variant']:
-                                green_genes_dict[gene]['missense_count'] += 1
+                                is_missense = True
                             elif variant_type in ['frameshift_variant',
                                                   'nonsense',
                                                   'splice_acceptor_variant',
                                                   'splice_donor_variant']:
-                                green_genes_dict[gene]['premature_stop_codon_count'] += 1
+                                is_premature_stop_codon = True
                             elif variant_type in ['3_prime_UTR_variant',
                                                   '5_prime_UTR_variant',
                                                   'genic_downstream_transcript_variant',
@@ -77,6 +80,10 @@ if __name__ == "__main__":
                             else:
                                 print(f'Unknown variant_type: {variant_type}', file=sys.stderr)
                                 sys.exit(1)
+                        if is_missense:
+                            green_genes_dict[gene]['missense_count'] += 1
+                        if is_premature_stop_codon:
+                            green_genes_dict[gene]['premature_stop_codon_count'] += 1
 
     pprint.pprint(green_genes_dict)
                                 
