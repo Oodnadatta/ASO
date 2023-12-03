@@ -41,49 +41,56 @@ def enumerate_clinvar_data(file_path):
 if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
     for green_gene in green_genes_dict.values():
-        green_gene['missense_count'] = 0 # Add 'missense_count' in green_genes_dict
-        green_gene['premature_stop_codon_count'] = 0
+        green_gene['P/LP_missense_count'] = 0 # Add 'missense_count' in green_genes_dict
+        green_gene['P/LP_premature_stop_codon_count'] = 0
     for clinvar_row in enumerate_clinvar_data(sys.argv[2]):
         if 'GENEINFO' in clinvar_row:
             for gene, omim in clinvar_row['GENEINFO']:
                 if gene in green_genes_dict.keys():
-                    variant_types = []
-                    if 'MC' in clinvar_row:
-                        is_missense = False
-                        is_premature_stop_codon = False
-                        for molecular_consequence in clinvar_row['MC']:
-                            # clinvar_row['MC'] : value from 'MC' = [['SO:0001624', '3_prime_UTR_variant']]
-                            variant_type = molecular_consequence[1]
-                            #variant_types.append(variant_type)
-                        # print(clinvar_row['CLNSIG'], gene, variant_types) = 5 Uncertain_significance GNB1 ['3_prime_UTR_variant']
-                            if variant_type in ['inframe_deletion',
-                                                'inframe_indel',
-                                                'inframe_insertion',
-                                                'missense_variant']:
-                                is_missense = True
-                            elif variant_type in ['frameshift_variant',
-                                                  'nonsense',
-                                                  'splice_acceptor_variant',
-                                                  'splice_donor_variant']:
-                                is_premature_stop_codon = True
-                            elif variant_type in ['3_prime_UTR_variant',
-                                                  '5_prime_UTR_variant',
-                                                  'genic_downstream_transcript_variant',
-                                                  'genic_upstream_transcript_variant',
-                                                  'initiator_codon_variant',
-                                                  'intron_variant',
-                                                  'no_sequence_alteration',
-                                                  'non-coding_transcript_variant',
-                                                  'stop_lost',
-                                                  'synonymous_variant']:
-                                pass
-                            else:
-                                print(f'Unknown variant_type: {variant_type}', file=sys.stderr)
-                                sys.exit(1)
-                        if is_missense:
-                            green_genes_dict[gene]['missense_count'] += 1
-                        if is_premature_stop_codon:
-                            green_genes_dict[gene]['premature_stop_codon_count'] += 1
+                    if 'CLNSIG' in clinvar_row:
+                        if clinvar_row['CLNSIG'] in ['Likely_pathogenic',
+                                                     'Pathogenic',
+                                                     'Pathogenic/Likely_pathogenic',
+                                                     'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance',
+                                                     'Pathogenic/Likely_risk_allele',
+                                                     'Pathogenic|drug_response|other']:
+                            variant_types = []
+                            if 'MC' in clinvar_row:
+                                is_missense = False
+                                is_premature_stop_codon = False
+                                for molecular_consequence in clinvar_row['MC']:
+                                    # clinvar_row['MC'] : value from 'MC' = [['SO:0001624', '3_prime_UTR_variant']]
+                                    variant_type = molecular_consequence[1]
+                                    #variant_types.append(variant_type)
+                                # print(clinvar_row['CLNSIG'], gene, variant_types) = 5 Uncertain_significance GNB1 ['3_prime_UTR_variant']
+                                    if variant_type in ['inframe_deletion',
+                                                        'inframe_indel',
+                                                        'inframe_insertion',
+                                                        'missense_variant']:
+                                        is_missense = True
+                                    elif variant_type in ['frameshift_variant',
+                                                          'nonsense',
+                                                          'splice_acceptor_variant',
+                                                          'splice_donor_variant']:
+                                        is_premature_stop_codon = True
+                                    elif variant_type in ['3_prime_UTR_variant',
+                                                          '5_prime_UTR_variant',
+                                                          'genic_downstream_transcript_variant',
+                                                          'genic_upstream_transcript_variant',
+                                                          'initiator_codon_variant',
+                                                          'intron_variant',
+                                                          'no_sequence_alteration',
+                                                          'non-coding_transcript_variant',
+                                                          'stop_lost',
+                                                          'synonymous_variant']:
+                                        pass
+                                    else:
+                                        print(f'Unknown variant_type: {variant_type}', file=sys.stderr)
+                                        sys.exit(1)
+                                if is_missense:
+                                    green_genes_dict[gene]['P/LP_missense_count'] += 1
+                                if is_premature_stop_codon:
+                                    green_genes_dict[gene]['P/LP_premature_stop_codon_count'] += 1
 
     pprint.pprint(green_genes_dict)
                                 
