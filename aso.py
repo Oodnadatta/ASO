@@ -7,9 +7,9 @@ import csv
 import pprint
 import sys
 
-def get_green_from_panelapp_file(file_path):
+def get_green_from_panelapp_file(panelapp_file_path):
     panelapp_dict = {}
-    with open(file_path) as panelapp_file:
+    with open(panelapp_file_path) as panelapp_file:
         for row in csv.DictReader(panelapp_file, delimiter='\t'):
             if 'Expert Review Green' in row['Sources(; separated)'].split(';'): 
                 if row['Gene Symbol'] != '':
@@ -17,8 +17,8 @@ def get_green_from_panelapp_file(file_path):
     return panelapp_dict
     # {'AARS': {'Entity Name': 'AARS', 'Entity type': 'gene', 'Gene Symbol': 'AARS', 'Sources(; separated)': 'Wessex and West Midlands GLH;NHS GMS;Victorian C\linical Genetics Services;Expert Review Green;Literature', 'Level4': 'Early onset or syndromic epilepsy', 'Level3': '', 'Level2': '', 'Model_Of_Inherita\nce': 'BIALLELIC, autosomal or pseudoautosomal', 'Phenotypes': 'Developmental and epileptic encephalopathy 29, OMIM:616339;Developmental and epileptic e\ncephalopathy, 29, MONDO:0014593', 'Omim': '601065', 'Orphanet': '', 'HPO': '', 'Publications': '25817015;28493438', 'Description': '', 'Flagged': '', '\GEL_Status': '3', 'UserRatings_Green_amber_red': '', 'version': '4.0', 'ready': '', 'Mode of pathogenicity': '', 'EnsemblId(GRch37)': 'ENSG00000090861',\ 'EnsemblId(GRch38)': 'ENSG00000090861', 'HGNC': 'HGNC:20', 'Position Chromosome': '', 'Position GRCh37 Start': '', 'Position GRCh37 End': '', 'Position\ GRCh38 Start': '', 'Position GRCh38 End': '', 'STR Repeated Sequence': '', 'STR Normal Repeats': '', 'STR Pathogenic Repeats': '', 'Region Haploinsuffi\ciency Score': '', 'Region Triplosensitivity Score': '', 'Region Required Overlap Percentage': '', 'Region Variant Type': '', 'Region Verbose Name': ''}
 
-def enumerate_clinvar_data(file_path):
-    with open(file_path) as clinvar_file:
+def enumerate_clinvar_data(clinvar_file_path):
+    with open(clinvar_file_path) as clinvar_file:
         for line in clinvar_file:
             if not line.startswith('#'):
                 info = line.rstrip().split('\t')[7]
@@ -37,13 +37,12 @@ def enumerate_clinvar_data(file_path):
                         value = mc
                     row_dict[key] = value
                 yield row_dict
-            
-if __name__ == "__main__":
-    green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
+
+def add_clinvar_info(clinvar_file_path, green_genes_dict):
     for green_gene in green_genes_dict.values():
         green_gene['P/LP_missense_count'] = 0 # Add 'missense_count' in green_genes_dict
         green_gene['P/LP_premature_stop_codon_count'] = 0
-    for clinvar_row in enumerate_clinvar_data(sys.argv[2]):
+    for clinvar_row in enumerate_clinvar_data(clinvar_file_path):
         if 'GENEINFO' in clinvar_row:
             for gene, omim in clinvar_row['GENEINFO']:
                 if gene in green_genes_dict.keys():
@@ -91,7 +90,14 @@ if __name__ == "__main__":
                                     green_genes_dict[gene]['P/LP_missense_count'] += 1
                                 if is_premature_stop_codon:
                                     green_genes_dict[gene]['P/LP_premature_stop_codon_count'] += 1
-
-    pprint.pprint(green_genes_dict)
-                                
+    
                 
+def display_genes_dict(genes_dict):
+    print('Gene_Symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count')
+    for gene in genes_dict.values():
+        print('\t'.join([gene['Gene Symbol'], gene['Phenotypes'], str(gene['P/LP_missense_count']), str(gene['P/LP_premature_stop_codon_count'])]))
+    
+if __name__ == "__main__":
+    green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
+    add_clinvar_info(sys.argv[2], green_genes_dict)
+    display_genes_dict(green_genes_dict)
