@@ -92,12 +92,44 @@ def add_clinvar_info(clinvar_file_path, green_genes_dict):
                                     green_genes_dict[gene]['P/LP_premature_stop_codon_count'] += 1
     
                 
+def get_nm_mane_from_gnomad_constraint_file(gnomad_file_path):
+    gnomad_dict = {}
+    with open(gnomad_file_path) as gnomad_file:
+        for row in csv.DictReader(gnomad_file, delimiter='\t'):
+            if row['mane_select'] == 'true':
+                if row['transcript'].startswith('NM_'):
+                    gnomad_dict[row['gene']] = row
+    return gnomad_dict
+                    
+def add_gnomad_info(gnomad_file_path, green_genes_dict):
+    gnomad_dict = get_nm_mane_from_gnomad_constraint_file(gnomad_file_path)
+    for gene_dict in green_genes_dict.values():
+        if gene_dict['Gene Symbol'] in gnomad_dict: #FIXME with HGNC
+            gene_dict['lof.pLI'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.pLI']
+            gene_dict['lof.oe'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.oe']
+            gene_dict['lof.oe_ci.upper'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.oe_ci.upper']
+        else: #FIXME with HGNC
+            gene_dict['lof.pLI'] = 'missing'
+            gene_dict['lof.oe'] = 'missing'
+            gene_dict['lof.oe_ci.upper'] = 'missing'
+     
 def display_genes_dict(genes_dict):
-    print('Gene_Symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count')
-    for gene in genes_dict.values():
-        print('\t'.join([gene['Gene Symbol'], gene['Phenotypes'], str(gene['P/LP_missense_count']), str(gene['P/LP_premature_stop_codon_count'])]))
+    print('Gene_Symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI\tlof.oe\tLOEUF')
+    for gene_dict in genes_dict.values():
+        print('\t'.join([
+            gene_dict['Gene Symbol'],
+            gene_dict['Phenotypes'],
+            str(gene_dict['P/LP_missense_count']),
+            str(gene_dict['P/LP_premature_stop_codon_count']),
+            gene_dict['lof.pLI'],
+            gene_dict['lof.oe'],
+            gene_dict['lof.oe_ci.upper']
+        ]))
     
 if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
     add_clinvar_info(sys.argv[2], green_genes_dict)
+    add_gnomad_info(sys.argv[3], green_genes_dict)
     display_genes_dict(green_genes_dict)
+
+    
