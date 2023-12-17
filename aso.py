@@ -112,13 +112,37 @@ def add_gnomad_info(gnomad_file_path, green_genes_dict):
             gene_dict['lof.pLI'] = 'missing'
             gene_dict['lof.oe'] = 'missing'
             gene_dict['lof.oe_ci.upper'] = 'missing'
-     
+
+def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
+    omim_dict = {}
+    with open(omim_genemap_file_path) as omim_file:
+        for row in csv.DictReader(omim_file, delimiter='\t'):
+            gene_symbol_list = []
+            for gene_symbol in row['Gene/Locus And Other Related Symbols'].split(','):
+                gene_symbol_list.append(gene_symbol.strip())
+            phenotype_list = []
+            for phenotype in row['Phenotypes'].split(';'):
+                phenotype_list.append(phenotype.strip())
+                # TODO FIXME: parse phenotype_list:
+                # 1) phenotype = phenotype.strip().split(',')[0]
+                # 2) mim_number = phenotype.strip().split(',')[1]
+                # 3) transmission_mode = phenotype.strip().split(',')[2]
+            gene_phenotype = {
+                'Gene/Locus And Other Related Symbols': gene_symbol_list,
+                'Approved Gene Symbol': row['Approved Gene Symbol'],
+                'Phenotype': phenotype_list,
+            }
+            for gene in gene_symbol_list:
+                omim_dict[gene] = gene_phenotype
+    pprint.pprint(omim_dict)
+    return omim_dict
+            
 def display_genes_dict(genes_dict):
     print('Gene_Symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI\tlof.oe\tLOEUF')
     for gene_dict in genes_dict.values():
         print('\t'.join([
             gene_dict['Gene Symbol'],
-            gene_dict['Phenotypes'],
+            '"' + gene_dict['Phenotypes'] + '"',
             str(gene_dict['P/LP_missense_count']),
             str(gene_dict['P/LP_premature_stop_codon_count']),
             gene_dict['lof.pLI'],
@@ -130,6 +154,7 @@ if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
     add_clinvar_info(sys.argv[2], green_genes_dict)
     add_gnomad_info(sys.argv[3], green_genes_dict)
+#    get_gene_phenotype_from_omim_file(sys.argv[4])
     display_genes_dict(green_genes_dict)
 
     
