@@ -134,14 +134,22 @@ def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
             }
             for gene in gene_symbol_list:
                 omim_dict[gene] = gene_phenotype
-    pprint.pprint(omim_dict)
     return omim_dict
+
+def add_omim_info(omim_genemap_file_path, green_genes_dict):
+    omim_dict = get_gene_phenotype_from_omim_file(omim_genemap_file_path)
+    for gene_dict in green_genes_dict.values():
+        if gene_dict['Gene Symbol'] in omim_dict:
+            gene_dict['Approved Gene Symbol'] = omim_dict[gene_dict['Gene Symbol']]['Approved Gene Symbol']
+        else:
+            gene_dict['Approved Gene Symbol'] = 'missing'
             
 def display_genes_dict(genes_dict):
-    print('Gene_Symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI\tlof.oe\tLOEUF')
+    print('Gene_Symbol\tApproved_gene_symbol\tPhenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI\tlof.oe\tLOEUF')
     for gene_dict in genes_dict.values():
         print('\t'.join([
             gene_dict['Gene Symbol'],
+            gene_dict['Approved Gene Symbol'],
             '"' + gene_dict['Phenotypes'] + '"',
             str(gene_dict['P/LP_missense_count']),
             str(gene_dict['P/LP_premature_stop_codon_count']),
@@ -154,7 +162,7 @@ if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
     add_clinvar_info(sys.argv[2], green_genes_dict)
     add_gnomad_info(sys.argv[3], green_genes_dict)
-#    get_gene_phenotype_from_omim_file(sys.argv[4])
+    add_omim_info(sys.argv[4], green_genes_dict)
     display_genes_dict(green_genes_dict)
 
     
