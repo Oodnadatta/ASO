@@ -17,6 +17,41 @@ def get_green_from_panelapp_file(panelapp_file_path):
     return panelapp_dict
     # {'AARS': {'Entity Name': 'AARS', 'Entity type': 'gene', 'Gene Symbol': 'AARS', 'Sources(; separated)': 'Wessex and West Midlands GLH;NHS GMS;Victorian C\linical Genetics Services;Expert Review Green;Literature', 'Level4': 'Early onset or syndromic epilepsy', 'Level3': '', 'Level2': '', 'Model_Of_Inherita\nce': 'BIALLELIC, autosomal or pseudoautosomal', 'Phenotypes': 'Developmental and epileptic encephalopathy 29, OMIM:616339;Developmental and epileptic e\ncephalopathy, 29, MONDO:0014593', 'Omim': '601065', 'Orphanet': '', 'HPO': '', 'Publications': '25817015;28493438', 'Description': '', 'Flagged': '', '\GEL_Status': '3', 'UserRatings_Green_amber_red': '', 'version': '4.0', 'ready': '', 'Mode of pathogenicity': '', 'EnsemblId(GRch37)': 'ENSG00000090861',\ 'EnsemblId(GRch38)': 'ENSG00000090861', 'HGNC': 'HGNC:20', 'Position Chromosome': '', 'Position GRCh37 Start': '', 'Position GRCh37 End': '', 'Position\ GRCh38 Start': '', 'Position GRCh38 End': '', 'STR Repeated Sequence': '', 'STR Normal Repeats': '', 'STR Pathogenic Repeats': '', 'Region Haploinsuffi\ciency Score': '', 'Region Triplosensitivity Score': '', 'Region Required Overlap Percentage': '', 'Region Variant Type': '', 'Region Verbose Name': ''}
 
+def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
+    omim_dict = {}
+    with open(omim_genemap_file_path) as omim_file:
+        for row in csv.DictReader(omim_file, delimiter='\t'):
+            gene_symbol_list = []
+            for gene_symbol in row['Gene/Locus And Other Related Symbols'].split(','):
+                gene_symbol_list.append(gene_symbol.strip())
+            phenotype_list = []
+            for phenotype in row['Phenotypes'].split(';'):
+                phenotype_list.append(phenotype.strip())
+                # TODO FIXME: parse phenotype_list:
+                # 1) phenotype = phenotype.strip().split(',')[0]
+                # 2) mim_number = phenotype.strip().split(',')[1]
+                # 3) transmission_mode = phenotype.strip().split(',')[2]
+            gene_phenotype = {
+                'Gene/Locus And Other Related Symbols': gene_symbol_list,
+                'Approved Gene Symbol': row['Approved Gene Symbol'],
+                'Phenotypes': phenotype_list,
+            }
+            for gene in gene_symbol_list:
+                omim_dict[gene] = gene_phenotype
+    return omim_dict
+
+def add_omim_info(omim_genemap_file_path, green_genes_dict):
+    omim_dict = get_gene_phenotype_from_omim_file(omim_genemap_file_path)
+    for gene_dict in green_genes_dict.values():
+        if gene_dict['Gene Symbol'] in omim_dict:
+            gene_dict['Approved Gene Symbol'] = omim_dict[gene_dict['Gene Symbol']]['Approved Gene Symbol']
+            gene_dict['OMIM Phenotypes'] = omim_dict[gene_dict['Gene Symbol']]['Phenotypes']
+            gene_dict['Transmission mode'] = 'not implemented'
+        else:
+            gene_dict['Approved Gene Symbol'] = 'missing'
+            gene_dict['OMIM Phenotypes'] = 'missing'
+            gene_dict['Transmission mode'] = 'missing'
+    
 def enumerate_clinvar_data(clinvar_file_path):
     with open(clinvar_file_path) as clinvar_file:
         for line in clinvar_file:
@@ -104,49 +139,14 @@ def get_nm_mane_from_gnomad_constraint_file(gnomad_file_path):
 def add_gnomad_info(gnomad_file_path, green_genes_dict):
     gnomad_dict = get_nm_mane_from_gnomad_constraint_file(gnomad_file_path)
     for gene_dict in green_genes_dict.values():
-        if gene_dict['Gene Symbol'] in gnomad_dict: #FIXME with HGNC
-            gene_dict['lof.pLI'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.pLI']
-            gene_dict['lof.oe'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.oe']
-            gene_dict['lof.oe_ci.upper'] = gnomad_dict[gene_dict['Gene Symbol']]['lof.oe_ci.upper']
-        else: #FIXME with HGNC
+        if gene_dict['Approved Gene Symbol'] in gnomad_dict:
+            gene_dict['lof.pLI'] = gnomad_dict[gene_dict['Approved Gene Symbol']]['lof.pLI']
+            gene_dict['lof.oe'] = gnomad_dict[gene_dict['Approved Gene Symbol']]['lof.oe']
+            gene_dict['lof.oe_ci.upper'] = gnomad_dict[gene_dict['Approved Gene Symbol']]['lof.oe_ci.upper']
+        else:
             gene_dict['lof.pLI'] = 'missing'
             gene_dict['lof.oe'] = 'missing'
             gene_dict['lof.oe_ci.upper'] = 'missing'
-
-def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
-    omim_dict = {}
-    with open(omim_genemap_file_path) as omim_file:
-        for row in csv.DictReader(omim_file, delimiter='\t'):
-            gene_symbol_list = []
-            for gene_symbol in row['Gene/Locus And Other Related Symbols'].split(','):
-                gene_symbol_list.append(gene_symbol.strip())
-            phenotype_list = []
-            for phenotype in row['Phenotypes'].split(';'):
-                phenotype_list.append(phenotype.strip())
-                # TODO FIXME: parse phenotype_list:
-                # 1) phenotype = phenotype.strip().split(',')[0]
-                # 2) mim_number = phenotype.strip().split(',')[1]
-                # 3) transmission_mode = phenotype.strip().split(',')[2]
-            gene_phenotype = {
-                'Gene/Locus And Other Related Symbols': gene_symbol_list,
-                'Approved Gene Symbol': row['Approved Gene Symbol'],
-                'Phenotypes': phenotype_list,
-            }
-            for gene in gene_symbol_list:
-                omim_dict[gene] = gene_phenotype
-    return omim_dict
-
-def add_omim_info(omim_genemap_file_path, green_genes_dict):
-    omim_dict = get_gene_phenotype_from_omim_file(omim_genemap_file_path)
-    for gene_dict in green_genes_dict.values():
-        if gene_dict['Gene Symbol'] in omim_dict:
-            gene_dict['Approved Gene Symbol'] = omim_dict[gene_dict['Gene Symbol']]['Approved Gene Symbol']
-            gene_dict['OMIM Phenotypes'] = omim_dict[gene_dict['Gene Symbol']]['Phenotypes']
-            gene_dict['Transmission mode'] = 'not implemented'
-        else:
-            gene_dict['Approved Gene Symbol'] = 'missing'
-            gene_dict['OMIM Phenotypes'] = 'missing'
-            gene_dict['Transmission mode'] = 'missing'
             
 def display_genes_dict(genes_dict):
     print('Gene_Symbol\tApproved_gene_symbol\tOMIM_Phenotype\tTransmission_mode\tPanelapp_Phenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI\tlof.oe\tLOEUF')
@@ -166,7 +166,7 @@ def display_genes_dict(genes_dict):
     
 if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
-    add_clinvar_info(sys.argv[2], green_genes_dict)
-    add_gnomad_info(sys.argv[3], green_genes_dict)
-    add_omim_info(sys.argv[4], green_genes_dict)
+    add_omim_info(sys.argv[2], green_genes_dict)
+    add_clinvar_info(sys.argv[3], green_genes_dict)
+    add_gnomad_info(sys.argv[4], green_genes_dict)
     display_genes_dict(green_genes_dict)
