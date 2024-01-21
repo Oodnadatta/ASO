@@ -11,7 +11,7 @@ def get_green_from_panelapp_file(panelapp_file_path):
     panelapp_dict = {}
     with open(panelapp_file_path) as panelapp_file:
         for row in csv.DictReader(panelapp_file, delimiter='\t'):
-            if 'Expert Review Green' in row['Sources(; separated)'].split(';'): 
+            if 'Expert Review Green' in row['Sources(; separated)'].split(';'):
                 if row['Gene Symbol'] != '':
                     panelapp_dict[row['Gene Symbol']] = row
     return panelapp_dict
@@ -51,7 +51,7 @@ def add_omim_info(omim_genemap_file_path, green_genes_dict):
             gene_dict['Approved Gene Symbol'] = 'missing'
             gene_dict['OMIM Phenotypes'] = 'missing'
             gene_dict['Transmission mode'] = 'missing'
-    
+
 def enumerate_clinvar_data(clinvar_file_path):
     with open(clinvar_file_path) as clinvar_file:
         for line in clinvar_file:
@@ -125,8 +125,7 @@ def add_clinvar_info(clinvar_file_path, green_genes_dict):
                                     green_genes_dict[gene]['P/LP_missense_count'] += 1
                                 if is_premature_stop_codon:
                                     green_genes_dict[gene]['P/LP_premature_stop_codon_count'] += 1
-    
-                
+
 def get_nm_mane_from_gnomad4_constraint_file(gnomad4_file_path):
     gnomad4_dict = {}
     with open(gnomad4_file_path) as gnomad4_file:
@@ -135,7 +134,7 @@ def get_nm_mane_from_gnomad4_constraint_file(gnomad4_file_path):
                 if row['transcript'].startswith('NM_'):
                     gnomad4_dict[row['gene']] = row
     return gnomad4_dict
-                    
+
 def add_gnomad4_info(gnomad4_file_path, green_genes_dict):
     gnomad4_dict = get_nm_mane_from_gnomad4_constraint_file(gnomad4_file_path)
     for gene_dict in green_genes_dict.values():
@@ -154,7 +153,7 @@ def get_constraint_from_gnomad2_constraint_file(gnomad2_file_path):
         for row in csv.DictReader(gnomad2_file, delimiter='\t'):
             gnomad2_dict[row['gene']] = row
     return gnomad2_dict
-                    
+
 def add_gnomad2_info(gnomad2_file_path, green_genes_dict):
     gnomad2_dict = get_constraint_from_gnomad2_constraint_file(gnomad2_file_path)
     for gene_dict in green_genes_dict.values():
@@ -166,9 +165,24 @@ def add_gnomad2_info(gnomad2_file_path, green_genes_dict):
             gene_dict['pLI'] = 'missing'
             gene_dict['oe_lof'] = 'missing'
             gene_dict['oe_lof_upper'] = 'missing'
-            
+
+def get_mane_info_from_refseq_file(mane_file_path):
+    mane_dict = {}
+    with open(mane_file_path) as mane_file:
+        for row in csv.DictReader(mane_file, delimiter='\t'):
+            mane_dict[row['geneName2']] = row
+    return mane_dict
+
+def add_mane_length_info(mane_file_path, green_genes_dict):
+    mane_dict = get_mane_info_from_refseq_file(mane_file_path)
+    for gene_dict in green_genes_dict.values():
+        if gene_dict['Approved Gene Symbol'] in mane_dict:
+            gene_dict['mane_len'] = str(int(mane_dict[gene_dict['Approved Gene Symbol']]['chromEnd']) - int(mane_dict[gene_dict['Approved Gene Symbol']]['chromStart']))
+        else:
+            gene_dict['mane_len'] = 'missing'
+
 def display_genes_dict(genes_dict):
-    print('Gene_Symbol\tApproved_gene_symbol\tOMIM_Phenotype\tTransmission_mode\tPanelapp_Phenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI.v4\tlof.oe.v4\tLOEUF.v4\tlof.pLI.v2\tlof.oe.v2\tLOEUF.v2')
+    print('Gene_Symbol\tApproved_gene_symbol\tOMIM_Phenotype\tTransmission_mode\tPanelapp_Phenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI.v4\tlof.oe.v4\tLOEUF.v4\tlof.pLI.v2\tlof.oe.v2\tLOEUF.v2\tMANE_length')
     for gene_dict in genes_dict.values():
         print('\t'.join([
             gene_dict['Gene Symbol'],
@@ -183,13 +197,15 @@ def display_genes_dict(genes_dict):
             gene_dict['lof.oe_ci.upper'],
             gene_dict['pLI'],
             gene_dict['oe_lof'],
-            gene_dict['oe_lof_upper']
+            gene_dict['oe_lof_upper'],
+            gene_dict['mane_len']
         ]))
-    
+
 if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
     add_omim_info(sys.argv[2], green_genes_dict)
     add_clinvar_info(sys.argv[3], green_genes_dict)
     add_gnomad4_info(sys.argv[4], green_genes_dict)
     add_gnomad2_info(sys.argv[5], green_genes_dict)
+    add_mane_length_info(sys.argv[6], green_genes_dict)
     display_genes_dict(green_genes_dict)
