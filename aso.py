@@ -184,22 +184,23 @@ def add_mane_length_info(mane_file_path, green_genes_dict):
 def display_genes_dict(genes_dict):
     print('Gene_Symbol\tApproved_gene_symbol\tOMIM_Phenotype\tTransmission_mode\tPanelapp_Phenotype\tP/LP_missense_count\tP/LP_PSC_count\tlof.pLI.v4\tlof.oe.v4\tLOEUF.v4\tlof.pLI.v2\tlof.oe.v2\tLOEUF.v2\tMANE_length')
     for gene_dict in genes_dict.values():
-        print('\t'.join([
-            gene_dict['Gene Symbol'],
-            gene_dict['Approved Gene Symbol'],
-            str(gene_dict['OMIM Phenotypes']),
-            gene_dict['Transmission mode'],
-            '"' + gene_dict['Phenotypes'] + '"',
-            str(gene_dict['P/LP_missense_count']),
-            str(gene_dict['P/LP_premature_stop_codon_count']),
-            gene_dict['lof.pLI'],
-            gene_dict['lof.oe'],
-            gene_dict['lof.oe_ci.upper'],
-            gene_dict['pLI'],
-            gene_dict['oe_lof'],
-            gene_dict['oe_lof_upper'],
-            gene_dict['mane_len']
-        ]))
+        for omim_phenotype in gene_dict['OMIM Phenotypes']:
+            print('\t'.join([
+                gene_dict['Gene Symbol'],
+                gene_dict['Approved Gene Symbol'],
+                omim_phenotype,
+                gene_dict['Transmission mode'],
+                '"' + gene_dict['Phenotypes'] + '"',
+                str(gene_dict['P/LP_missense_count']),
+                str(gene_dict['P/LP_premature_stop_codon_count']),
+                gene_dict['lof.pLI'],
+                gene_dict['lof.oe'],
+                gene_dict['lof.oe_ci.upper'],
+                gene_dict['pLI'],
+                gene_dict['oe_lof'],
+                gene_dict['oe_lof_upper'],
+                gene_dict['mane_len']
+            ]))
 
 if __name__ == "__main__":
     green_genes_dict = get_green_from_panelapp_file(sys.argv[1])
