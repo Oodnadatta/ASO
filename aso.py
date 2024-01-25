@@ -5,6 +5,7 @@
 
 import csv
 import pprint
+import re
 import sys
 
 def get_green_from_panelapp_file(panelapp_file_path):
@@ -17,6 +18,48 @@ def get_green_from_panelapp_file(panelapp_file_path):
     return panelapp_dict
     # {'AARS': {'Entity Name': 'AARS', 'Entity type': 'gene', 'Gene Symbol': 'AARS', 'Sources(; separated)': 'Wessex and West Midlands GLH;NHS GMS;Victorian C\linical Genetics Services;Expert Review Green;Literature', 'Level4': 'Early onset or syndromic epilepsy', 'Level3': '', 'Level2': '', 'Model_Of_Inherita\nce': 'BIALLELIC, autosomal or pseudoautosomal', 'Phenotypes': 'Developmental and epileptic encephalopathy 29, OMIM:616339;Developmental and epileptic e\ncephalopathy, 29, MONDO:0014593', 'Omim': '601065', 'Orphanet': '', 'HPO': '', 'Publications': '25817015;28493438', 'Description': '', 'Flagged': '', '\GEL_Status': '3', 'UserRatings_Green_amber_red': '', 'version': '4.0', 'ready': '', 'Mode of pathogenicity': '', 'EnsemblId(GRch37)': 'ENSG00000090861',\ 'EnsemblId(GRch38)': 'ENSG00000090861', 'HGNC': 'HGNC:20', 'Position Chromosome': '', 'Position GRCh37 Start': '', 'Position GRCh37 End': '', 'Position\ GRCh38 Start': '', 'Position GRCh38 End': '', 'STR Repeated Sequence': '', 'STR Normal Repeats': '', 'STR Pathogenic Repeats': '', 'Region Haploinsuffi\ciency Score': '', 'Region Triplosensitivity Score': '', 'Region Required Overlap Percentage': '', 'Region Variant Type': '', 'Region Verbose Name': ''}
 
+def parse_phenotype(phenotype):
+    # The code from this function mostly comes from genemap2-parser/parseGeneMap2.py
+    # Copyright (c) 2019 François Schiettecatte
+    # Under MIT License
+    # Long phenotype
+    matcher = re.match(r'^(.*),\s(\d{6})\s\((\d)\)(|, (.*))$', phenotype)
+    if matcher:
+
+        # Get the fields
+        phenotype_name = matcher.group(1)
+        phenotypeMimNumber = matcher.group(2)
+        phenotypeMappingKey = matcher.group(3)
+        inheritances = matcher.group(5)
+
+        # Get the inheritances, may or may not be there
+        if inheritances:
+            for inheritance in inheritances.split(','):
+                inheritance = inheritance.strip()
+
+    # Short phenotype
+    else:
+
+        # Short phenotype
+        matcher = re.match(r'^(.*)\((\d)\)(|, (.*))$', phenotype)
+        if matcher:
+
+            # Get the fields
+            phenotype_name = matcher.group(1)
+            phenotypeMappingKey = matcher.group(2)
+            inheritances = matcher.group(3)
+
+            # Get the inheritances, may or may not be there
+            if inheritances:
+                for inheritance in inheritances.split(','):
+                    inheritance = inheritance.strip()
+
+        # End of the code from François Schiettecatte
+        else:
+            phenotype_name = 'missing'
+            inheritances = ['missing']
+    return phenotype_name, inheritances
+
 def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
     omim_dict = {}
     with open(omim_genemap_file_path) as omim_file:
@@ -26,11 +69,7 @@ def get_gene_phenotype_from_omim_file(omim_genemap_file_path):
                 gene_symbol_list.append(gene_symbol.strip())
             phenotype_list = []
             for phenotype in row['Phenotypes'].split(';'):
-                phenotype_list.append(phenotype.strip())
-                # TODO FIXME: parse phenotype_list:
-                # 1) phenotype = phenotype.strip().split(',')[0]
-                # 2) mim_number = phenotype.strip().split(',')[1]
-                # 3) transmission_mode = phenotype.strip().split(',')[2]
+                phenotype_list.append(parse_phenotype(phenotype.strip())) # phenotype_list: list of pairs of (a string and a list of strings)
             gene_phenotype = {
                 'Gene/Locus And Other Related Symbols': gene_symbol_list,
                 'Approved Gene Symbol': row['Approved Gene Symbol'],
@@ -46,11 +85,9 @@ def add_omim_info(omim_genemap_file_path, green_genes_dict):
         if gene_dict['Gene Symbol'] in omim_dict:
             gene_dict['Approved Gene Symbol'] = omim_dict[gene_dict['Gene Symbol']]['Approved Gene Symbol']
             gene_dict['OMIM Phenotypes'] = omim_dict[gene_dict['Gene Symbol']]['Phenotypes']
-            gene_dict['Transmission mode'] = 'not implemented'
         else:
             gene_dict['Approved Gene Symbol'] = 'missing'
-            gene_dict['OMIM Phenotypes'] = 'missing'
-            gene_dict['Transmission mode'] = 'missing'
+            gene_dict['OMIM Phenotypes'] = [('missing', ['missing'])]
 
 def enumerate_clinvar_data(clinvar_file_path):
     with open(clinvar_file_path) as clinvar_file:
@@ -188,8 +225,8 @@ def display_genes_dict(genes_dict):
             print('\t'.join([
                 gene_dict['Gene Symbol'],
                 gene_dict['Approved Gene Symbol'],
-                omim_phenotype,
-                gene_dict['Transmission mode'],
+                omim_phenotype[0],
+                str(omim_phenotype[1]),
                 '"' + gene_dict['Phenotypes'] + '"',
                 str(gene_dict['P/LP_missense_count']),
                 str(gene_dict['P/LP_premature_stop_codon_count']),
